@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function(e){
     if(!isRunning){
       getAll(team_id, participant_id).then(function(){
         console.log(INFO);
+        fill();
       });
       startButton.innerText = 'Stop';
 
@@ -33,6 +34,17 @@ document.addEventListener('DOMContentLoaded', function(e){
   });
 
 });
+
+function fill(){
+  var recentDonationBody = document.querySelector('.donations-body');
+  INFO.recent_donations.recentDonations.forEach(function(donation){
+    var donationHTML = '<div class="name">'+donation.name+'</div><div class="date">'+donation.date+'</div><div class="message">'+donation.message+'</div>';
+    var donationElement = document.createElement('div');
+    donationElement.classList.add('donation');
+    donationElement.innerHTML = donationHTML;
+    recentDonationBody.appendChild(donationElement);
+  });
+}
 
 function getAll(team_id, participant_id){
   var a = getParticipantInfo(participant_id).then(function(res){
