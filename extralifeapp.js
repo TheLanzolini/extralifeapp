@@ -1,6 +1,7 @@
 var request = require('request');
 var q = require('q');
 var cheerio = require('cheerio');
+var shell = require('shell');
 var INFO = {};
 
 document.addEventListener('DOMContentLoaded', function(e){
@@ -28,10 +29,18 @@ document.addEventListener('DOMContentLoaded', function(e){
     }else{
       // Clear Interval
       // Clear goals/recent donations
+      document.querySelector('.donations-body').innerHTML = '';
       isRunning = false;
       startButton.innerText = 'Start';
     }
   });
+  
+  var links = document.querySelectorAll('[data-link]');
+  for(var i=0;i<links.length;i++){
+    links[i].addEventListener('click', function(e){
+      shell.openExternal(e.target.getAttribute('data-link'));
+    });
+  }
 
 });
 
@@ -44,6 +53,14 @@ function fill(){
     donationElement.innerHTML = donationHTML;
     recentDonationBody.appendChild(donationElement);
   });
+  var participantAvatar = document.querySelector('.participant-info .avatar');
+  var participantName = document.querySelector('.participant-info .name');
+  participantName.innerText = INFO.participant_info.name;
+  participantAvatar.style.backgroundImage = "url('http:"+INFO.participant_info.image+"')";
+  var teamAvatar = document.querySelector('.team-info .avatar');
+  var teamName = document.querySelector('.team-info .name');
+  teamName.innerText = INFO.team_info.name;
+  teamAvatar.style.backgroundImage = "url('"+INFO.team_info.teamImage+"')";
 }
 
 function getAll(team_id, participant_id){

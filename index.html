@@ -7,23 +7,30 @@
     <link rel="stylesheet" href="extralifeapp.css" type="text/css">
   </head>
   <body>
-    <h1>Extra Life!</h1>
-    <div>
-      <a href="http://extra-life.org">This app was created to support Extra Life!</a>
-    </div>
-    <div>
-      <a href="https://github.com/TheLanzolini/extralifeapp">https://github.com/TheLanzolini/extralifeapp</a>
-    </div>
-    <div>
-      <span>thelanzolini@gmail.com</span>
+    <div class="header">
+      <h1>Extra Life!</h1>
+      <div data-link="http://extra-life.org">This app was created to support Extra Life!</div>
+      <div data-link="https://github.com/TheLanzolini/extralifeapp">https://github.com/TheLanzolini/extralifeapp</div>
+      <div data-link="mailto:thelanzolini@gmail.com">thelanzolini@gmail.com</div>
     </div>
     <div class="main">
       <div class="inputs">
         <label for="team-id">Team ID: </label>
         <input id="team-id" type="text" value="24471" />
+        <br>
         <label for="participant-id">Participant ID: </label>
         <input id="participant-id" type="text" value="168451" />
         <button id="start">Start</button>
+      </div>
+      <div class="info">
+        <div class="participant-info">
+          <div class="avatar"></div>
+          <div class="name"></div>
+        </div>
+        <div class="team-info">
+          <div class="avatar"></div>
+          <div class="name"></div>
+        </div>
       </div>
       <div class="goals">
         <div class="team-goal goal">
