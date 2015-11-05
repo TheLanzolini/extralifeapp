@@ -1,0 +1,30 @@
+{
+  "name": "extralifeapp",
+  "version": "1.0.0",
+  "description": "an app to track donation for extra life",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheLanzolini/extralifeapp.git"
+  },
+  "keywords": [
+    "extra",
+    "life",
+    "api",
+    "electron"
+  ],
+  "author": "TheLanzolini",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/TheLanzolini/extralifeapp/issues"
+  },
+  "homepage": "https://github.com/TheLanzolini/extralifeapp#readme",
+  "dependencies": {
+    "cheerio": "^0.19.0",
+    "q": "^1.4.1",
+    "request": "^2.65.0"
+  }
+}
