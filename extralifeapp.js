@@ -2,13 +2,19 @@ var request = require('request');
 var q = require('q');
 var cheerio = require('cheerio');
 var shell = require('shell');
+var clipboard = require('clipboard');
+var notifier = require('node-notifier');
+var path = require('path');
 var INFO = {};
+var recentDonationsCache;
+var notificationsQueue = [];
 
 document.addEventListener('DOMContentLoaded', function(e){
   var isRunning = false;
   var startButton = document.getElementById('start');
   var teamIdInput = document.getElementById('team-id');
   var participantIdInput = document.getElementById('participant-id');
+  var interval;
   startButton.addEventListener('click', function(e){
     var team_id = parseInt(teamIdInput.value);
     var participant_id = parseInt(participantIdInput.value);
@@ -18,17 +24,40 @@ document.addEventListener('DOMContentLoaded', function(e){
     if(!isRunning){
       getAll(team_id, participant_id).then(function(){
         console.log(INFO);
+        recentDonationsCache = INFO.recent_donations.recentDonations;
+        var participantAvatar = document.querySelector('.participant-info .avatar');
+        var participantName = document.querySelector('.participant-info .name');
+        var participantLink = document.querySelector('.participant-info .copy-link');
+        participantName.innerText = INFO.participant_info.name;
+        participantAvatar.style.backgroundImage = "url('http:"+INFO.participant_info.image+"')";
+        participantLink.classList.remove('hidden');
+        var teamAvatar = document.querySelector('.team-info .avatar');
+        var teamName = document.querySelector('.team-info .name');
+        var teamLink = document.querySelector('.team-info .copy-link');
+        teamLink.classList.remove('hidden');
+        teamName.innerText = INFO.team_info.name;
+        teamAvatar.style.backgroundImage = "url('"+INFO.team_info.teamImage+"')";
+        participantLink.addEventListener('click', function(e){
+          clipboard.writeText(INFO.participant_info.donateURL);
+        });
+        teamLink.addEventListener('click', function(e){
+          clipboard.writeText(INFO.participant_info.teamURL);
+        });
         fill();
       });
       startButton.innerText = 'Stop';
-
-      // Start Interval
-      // Populate with goals/recent donations
-
+      interval = setInterval(function(){
+        getAll(team_id, participant_id).then(function(){
+          console.log(INFO);
+          INFO.recent_donations.recentDonations.push({name: 'Lex Anzoni', date: '11/05/15', message: 'This is a test donation. Being added in memory, not coming from api'});
+          INFO.recent_donations.recentDonations.push({name: 'Lex Anzoni', date: '11/05/15', message: 'This is a test donation. Being added in memory, not coming from api'});
+          INFO.recent_donations.recentDonations.push({name: 'Lex Anzoni', date: '11/05/15', message: 'This is a test donation. Being added in memory, not coming from api'});
+          fill();
+        });
+      }, 5000);
       isRunning = true;
     }else{
-      // Clear Interval
-      // Clear goals/recent donations
+      clearInterval(interval);
       document.querySelector('.donations-body').innerHTML = '';
       isRunning = false;
       startButton.innerText = 'Start';
@@ -46,6 +75,7 @@ document.addEventListener('DOMContentLoaded', function(e){
 
 function fill(){
   var recentDonationBody = document.querySelector('.donations-body');
+  recentDonationBody.innerHTML = '';
   INFO.recent_donations.recentDonations.forEach(function(donation){
     var donationHTML = '<div class="name">'+donation.name+'</div><div class="date">'+donation.date+'</div><div class="message">'+donation.message+'</div>';
     var donationElement = document.createElement('div');
@@ -53,14 +83,78 @@ function fill(){
     donationElement.innerHTML = donationHTML;
     recentDonationBody.appendChild(donationElement);
   });
-  var participantAvatar = document.querySelector('.participant-info .avatar');
-  var participantName = document.querySelector('.participant-info .name');
-  participantName.innerText = INFO.participant_info.name;
-  participantAvatar.style.backgroundImage = "url('http:"+INFO.participant_info.image+"')";
-  var teamAvatar = document.querySelector('.team-info .avatar');
-  var teamName = document.querySelector('.team-info .name');
-  teamName.innerText = INFO.team_info.name;
-  teamAvatar.style.backgroundImage = "url('"+INFO.team_info.teamImage+"')";
+  
+  compareDonations();
+}
+
+function compareDonations(){
+  var newRecent = INFO.recent_donations.recentDonations;
+  var oldRecent = recentDonationsCache;
+  var newDonations = [];
+  for(var i=0;i<newRecent.length;i++){
+    if(!containsObject(newRecent[i], oldRecent)){
+      newDonations.push(newRecent[i]);
+    }
+  }
+  announceDonations(newDonations);
+  recentDonationsCache = newRecent;
+}
+
+function announceDonations(newDonations){
+  // play audio and parse message
+  console.log('New Donations', newDonations);
+  
+  console.log(newDonations[0]);
+  notify(newDonations[0]).then(function(){
+    console.log('asd');
+  });
+  
+  
+  
+}
+
+function notify(donation){
+  var dfd = q.defer();
+  notifier.notify({
+    title: 'New Donation from '+donation.name,
+    message: donation.message,
+    icon: path.join(__dirname, 'images', 'tfn.jpg'), // absolute path (not balloons)
+    sound: true, // Only Notification Center or Windows Toasters
+    wait: false // wait with callback until user action is taken on notification
+  }, function (err, response) {
+    if(err){
+      dfd.reject();
+    }else{
+      dfd.resolve();
+    }
+    console.log('err & res', err, response);
+  });
+  return dfd.promise;
+}
+
+function containsObject(obj, list) {
+  var i;
+  for (i = 0; i < list.length; i++) {
+    if (isEquivalent(list[i], obj)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isEquivalent(a, b) {
+  var aProps = Object.getOwnPropertyNames(a);
+  var bProps = Object.getOwnPropertyNames(b);
+  if (aProps.length != bProps.length) {
+    return false;
+  }
+  for (var i = 0; i < aProps.length; i++) {
+    var propName = aProps[i];
+    if (a[propName] !== b[propName]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function getAll(team_id, participant_id){

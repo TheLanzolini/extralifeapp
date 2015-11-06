@@ -6,9 +6,13 @@ html{
   font-family: 'Cantarell', sans-serif;
   height: 100%;
   background-image: url('http://static.donordrive.com/themes/extralife2014/img/bk.jpg');
+  background-size: cover;
 }
 body{
   margin: 0;
+}
+.hidden{
+  display: none;
 }
 .header{
   text-align: center;
@@ -29,7 +33,7 @@ label{
 .inputs{
   text-align: center;
 }
-input{
+input, button{
   font-family: 'Cantarell', sans-serif;
 }
 .recent-donations{
