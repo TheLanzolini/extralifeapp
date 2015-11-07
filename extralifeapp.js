@@ -119,7 +119,7 @@ setInterval(function(){
 }, 5000);
 
 function checkSound(message){
-  if(message.includes('#cena') || message.includes('#cena')){
+  if(message.includes('#cena') || message.includes('#CENA')){
     playSound('cena');
   }
 }
