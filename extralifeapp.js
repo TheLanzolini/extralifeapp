@@ -28,12 +28,18 @@ document.addEventListener('DOMContentLoaded', function(e){
         var participantAvatar = document.querySelector('.participant-info .avatar');
         var participantName = document.querySelector('.participant-info .name');
         var participantLink = document.querySelector('.participant-info .copy-link');
+        var participantOpenLink = document.querySelector('.participant-info .open-link');
+        participantOpenLink.setAttribute('data-link', INFO.participant_info.donateURL);
         participantName.innerText = INFO.participant_info.name;
         participantAvatar.style.backgroundImage = "url('http:"+INFO.participant_info.image+"')";
+        participantOpenLink.classList.remove('hidden');
         participantLink.classList.remove('hidden');
         var teamAvatar = document.querySelector('.team-info .avatar');
         var teamName = document.querySelector('.team-info .name');
         var teamLink = document.querySelector('.team-info .copy-link');
+        var teamOpenLink = document.querySelector('.team-info .open-link');
+        teamOpenLink.setAttribute('data-link', INFO.team_info.teamURL);
+        teamOpenLink.classList.remove('hidden');
         teamLink.classList.remove('hidden');
         teamName.innerText = INFO.team_info.name;
         teamAvatar.style.backgroundImage = "url('"+INFO.team_info.teamImage+"')";
@@ -41,20 +47,24 @@ document.addEventListener('DOMContentLoaded', function(e){
           clipboard.writeText(INFO.participant_info.donateURL);
         });
         teamLink.addEventListener('click', function(e){
-          clipboard.writeText(INFO.participant_info.teamURL);
+          clipboard.writeText(INFO.team_info.teamURL);
         });
+        var links = document.querySelectorAll('[data-link]');
+        for(var i=0;i<links.length;i++){
+          links[i].addEventListener('click', function(e){
+            shell.openExternal(e.target.getAttribute('data-link'));
+          });
+        }
+        INFO.recent_donations.recentDonations({name: 'Alexander', date: '11/06/15', message: 'Make sure to play some #cena!'});
         fill();
       });
       startButton.innerText = 'Stop';
       interval = setInterval(function(){
         getAll(team_id, participant_id).then(function(){
           console.log(INFO);
-          INFO.recent_donations.recentDonations.push({name: 'Lex Anzoni', date: '11/05/15', message: 'This is a test donation. Being added in memory, not coming from api'});
-          INFO.recent_donations.recentDonations.push({name: 'Lex Anzoni', date: '11/05/15', message: 'This is a test donation. Being added in memory, not coming from api'});
-          INFO.recent_donations.recentDonations.push({name: 'Lex Anzoni', date: '11/05/15', message: 'This is a test donation. Being added in memory, not coming from api'});
           fill();
         });
-      }, 5000);
+      }, 10000);
       isRunning = true;
     }else{
       clearInterval(interval);
@@ -96,21 +106,30 @@ function compareDonations(){
       newDonations.push(newRecent[i]);
     }
   }
-  announceDonations(newDonations);
+  notificationsQueue = notificationsQueue.concat(newDonations);
   recentDonationsCache = newRecent;
 }
 
-function announceDonations(newDonations){
-  // play audio and parse message
-  console.log('New Donations', newDonations);
-  
-  console.log(newDonations[0]);
-  notify(newDonations[0]).then(function(){
-    console.log('asd');
-  });
-  
-  
-  
+setInterval(function(){
+  if(notificationsQueue.length > 0){
+    notify(notificationsQueue[0]);
+    checkSound(notificationsQueue[0]);
+    notificationsQueue.splice(0, 1);
+  }
+}, 5000);
+
+function checkSound(message){
+  if(message.includes('#cena') || message.includes('#cena')){
+    playSound('cena');
+  }
+}
+
+function playSound(sound){
+  var player = document.getElementById('player');
+  var playerSrc = path.join(__dirname, 'audio', sound, '.mp3');
+  player.src = playerSrc;
+  player.load();
+  player.play();
 }
 
 function notify(donation){

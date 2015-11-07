@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="extralifeapp.css" type="text/css">
   </head>
   <body>
+    <audio id="player"></audio>
     <div class="header">
       <h1>Extra Life!</h1>
       <div data-link="http://extra-life.org">This app was created to support Extra Life!</div>
@@ -27,22 +28,24 @@
           <div class="avatar"></div>
           <div class="name"></div>
           <button class="copy-link hidden">Copy Link</button>
+          <button class="open-link hidden">Open Link</button>
         </div>
         <div class="team-info">
           <div class="avatar"></div>
           <div class="name"></div>
           <button class="copy-link hidden">Copy Link</button>
+          <button class="open-link hidden">Open Link</button>
         </div>
       </div>
       <div class="goals">
-        <div class="team-goal goal">
+        <div class="participant-goal goal">
           <span class="goal-amount"></span>
           <div class="goal-bar">
             <div class="goal-bar-inner"></div>
           </div>
           <span class="goal-current"><span>
         </div>
-        <div class="participant-goal goal">
+        <div class="team-goal goal">
           <span class="goal-amount"></span>
           <div class="goal-bar">
             <div class="goal-bar-inner"></div>
