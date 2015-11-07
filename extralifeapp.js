@@ -55,7 +55,6 @@ document.addEventListener('DOMContentLoaded', function(e){
             shell.openExternal(e.target.getAttribute('data-link'));
           });
         }
-        INFO.recent_donations.recentDonations({name: 'Alexander', date: '11/06/15', message: 'Make sure to play some #cena!'});
         fill();
       });
       startButton.innerText = 'Stop';
@@ -73,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function(e){
       startButton.innerText = 'Start';
     }
   });
-  
+
   var links = document.querySelectorAll('[data-link]');
   for(var i=0;i<links.length;i++){
     links[i].addEventListener('click', function(e){
@@ -93,7 +92,7 @@ function fill(){
     donationElement.innerHTML = donationHTML;
     recentDonationBody.appendChild(donationElement);
   });
-  
+
   compareDonations();
 }
 
@@ -113,20 +112,26 @@ function compareDonations(){
 setInterval(function(){
   if(notificationsQueue.length > 0){
     notify(notificationsQueue[0]);
-    checkSound(notificationsQueue[0]);
+    checkSound(notificationsQueue[0].message);
     notificationsQueue.splice(0, 1);
   }
-}, 5000);
+}, 10000);
 
 function checkSound(message){
   if(message.includes('#cena') || message.includes('#CENA')){
     playSound('cena');
   }
+  if(message.includes('#memes') || message.includes('#MEMES')){
+    playSound('memes');
+  }
+  if(message.includes('#moneyinthebank') || message.includes('#MONEYINTHEBANK') || message.includes('#MoneyInTheBank')){
+    playSound('moneyinthebank');
+  }
 }
 
 function playSound(sound){
   var player = document.getElementById('player');
-  var playerSrc = path.join(__dirname, 'audio', sound, '.mp3');
+  var playerSrc = path.join(__dirname, 'audio', sound+'.mp3');
   player.src = playerSrc;
   player.load();
   player.play();
