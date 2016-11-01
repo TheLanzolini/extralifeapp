@@ -70,6 +70,20 @@ input, button{
   border-bottom: 2px solid #ddd;
   padding-top: 5px;
 }
+.donation:before, .donation:after{
+  content: '';
+  display: table;
+  clear: both;
+}
+.donation img{
+  float: left;
+  width: 20%;
+}
+.donation .dono{
+  float: left;
+  width: 75%;
+  padding: 2.5%;
+}
 button{
   background-color: white;
   color: black;
