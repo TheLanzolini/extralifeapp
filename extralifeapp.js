@@ -9,7 +9,11 @@ var path = require('path');
 var INFO = {};
 var recentDonationsCache;
 var notificationsQueue = [];
-// https://hooks.slack.com/services/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
+var CHECK_INTERVAL = 20000;
+
+window.slackNotify = function(text){
+  request.post('https://hooks.slack.com/services/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', {body: JSON.stringify({text: text, channel: '#extralife', username: 'ExtraLife Donation', icon_emoji: ':extralife:'})});
+}
 
 document.addEventListener('DOMContentLoaded', function(e){
   var isRunning = false;
@@ -18,13 +22,12 @@ document.addEventListener('DOMContentLoaded', function(e){
   var participantIdInput = document.getElementById('participant-id');
   var interval;
   startButton.addEventListener('click', function(e){
-    var team_id = parseInt(teamIdInput.value);
     var participant_id = parseInt(participantIdInput.value);
-    if(isNaN(team_id) || isNaN(participant_id)){
-      return alert('ERROR! Check your ids!');
+    if(isNaN(participant_id)){
+      return alert('ERROR! Check your id!');
     }
     if(!isRunning){
-      getAll(team_id, participant_id).then(function(){
+      getAll(participant_id).then(function(){
         console.log(INFO);
         recentDonationsCache = INFO.recent_donations.recentDonations;
         var participantAvatar = document.querySelector('.participant-info .avatar');
@@ -61,11 +64,11 @@ document.addEventListener('DOMContentLoaded', function(e){
       });
       startButton.innerText = 'Stop';
       interval = setInterval(function(){
-        getAll(team_id, participant_id).then(function(){
+        getAll(participant_id).then(function(){
           console.log(INFO);
           fill();
         });
-      }, 300000);
+      }, CHECK_INTERVAL);
       isRunning = true;
     }else{
       clearInterval(interval);
@@ -87,6 +90,22 @@ document.addEventListener('DOMContentLoaded', function(e){
 function fill(){
   var recentDonationBody = document.querySelector('.donations-body');
   recentDonationBody.innerHTML = '';
+  // var q = {
+  //   avatarImageURL: "//assets.donordrive.com/extralife/images/$avatars$/constituent_0680BAE6-C292-13D6-0A2E3AA090527D06.jpg",
+  //   createdOn: "2016-10-30T12:41:27-0400",
+  //   donationAmount: 15,
+  //   donorName: "TEST TESTERSON",
+  //   message: "yo dank #memes yo"
+  // };
+  // var w = {
+  //   avatarImageURL: "//assets.donordrive.com/extralife/images/$avatars$/constituent_0680BAE6-C292-13D6-0A2E3AA090527D06.jpg",
+  //   createdOn: "2016-10-30T12:41:27-0400",
+  //   donationAmount: 20,
+  //   donorName: "Lanzo",
+  //   message: "yo dank #cena yo"
+  // };
+  // debugger
+  // INFO.recent_donations.push(q);
   INFO.recent_donations.forEach(function(donation){
     var date = new Date(donation.createdOn).toLocaleDateString();
     var message = !!donation.message ? donation.message : 'No Message';
@@ -101,7 +120,7 @@ function fill(){
 }
 
 function compareDonations(){
-  var newRecent = INFO.recent_donations.recentDonations;
+  var newRecent = INFO.recent_donations;
   var oldRecent = recentDonationsCache;
   var newDonations = [];
   for(var i=0;i<newRecent.length;i++){
@@ -143,11 +162,12 @@ function playSound(sound){
 
 function notify(donation){
   var dfd = q.defer();
+  window.slackNotify(donation.donorName+' donated $'+donation.donationAmount+'! :pogchamp: "'+donation.message+'"');
   notifier.notify({
-    title: 'New Donation from '+donation.name,
+    title: 'New Donation from '+donation.donorName,
     message: donation.message,
-    icon: path.join(__dirname, 'images', 'tfn.jpg'), // absolute path (not balloons)
-    sound: true, // Only Notification Center or Windows Toasters
+    icon: path.join(__dirname, 'images', 'controller_blue.png'), // absolute path (not balloons)
+    sound: false, // Only Notification Center or Windows Toasters
     wait: false // wait with callback until user action is taken on notification
   }, function (err, response) {
     if(err){
@@ -185,66 +205,36 @@ function isEquivalent(a, b) {
   return true;
 }
 
-function getAll(team_id, participant_id){
+function getAll(participant_id){
   var a = getParticipantInfo(participant_id).then(function(res){
+    var dfd = q.defer();
     INFO.participant_info = res;
     INFO.participant_goal = {
       goal: res.fundraisingGoal,
       raised: res.totalRaisedAmount
     };
+    dfd.resolve(res);
+    return dfd.promise;
+  }).then(function(partInfo){
+    var dfd = q.defer();
+    getTeamInfo(partInfo.teamID).then(function(res){
+      INFO.team_info = res;
+      INFO.team_goal = {
+        goal: res.fundraisingGoal,
+        raised: res.totalRaisedAmount
+      }
+      dfd.resolve();
+    });
+    return dfd.promise;
   });
-  // var b = getParticipantGoal(participant_id).then(function(res){
-  //   
-  // });
   var c = getRecentDonations(participant_id).then(function(res){
     INFO.recent_donations = res;
   });
-  var d = getTeamInfo(team_id).then(function(res){
-    INFO.team_info = res;
-    INFO.team_goal = {
-      goal: res.fundraisingGoal,
-      raised: res.totalRaisedAmount
-    };
-  });
-  // var e = getTeamGoal(team_id).then(function(res){
-  //   INFO.team_goal = res;
-  // });
-  return q.all([a, c, d]);
+  return q.all([a, c]);
 }
 
 function getParticipantInfo(participant_id){
   var dfd = q.defer();
-  // var profileId = participant_id;
-	// var profileUrl = 'http://www.extra-life.org/index.cfm?fuseaction=donordrive.participant&participantID=' + profileId;
-	// var userInfoJson = { name : "", image : "", donateURL: "", team: "", teamURL: "", profileURL: profileUrl};
-	// request(profileUrl, function(error, response, html){
-	// 	if(!error){
-	// 		var $ = cheerio.load(html);
-	// 		var name, image, donateURL, team, teamURL;
-	// 		$('#participant-name').filter(function(){
-	// 			name = $(this).children('h1').text();
-	// 			userInfoJson.name = name;
-	// 		});
-	// 		$('.avatar').filter(function(){
-	// 			image = $(this).children('img.profile-img').attr('src');
-	// 			userInfoJson.image = image;
-	// 		});
-	// 		$('.btn-support-card').filter(function(){
-	// 			donateURL = $(this).attr('href');
-	// 			userInfoJson.donateURL = donateURL;
-	// 		});
-	// 		$('.link-team').filter(function(){
-	// 			var data = $(this);
-	// 			team = data.text();
-	// 			teamURL = 'http://www.extra-life.org/' + data.attr('href');
-	// 			userInfoJson.team = team;
-	// 			userInfoJson.teamURL = teamURL;
-	// 		});
-  //     dfd.resolve(userInfoJson);
-	// 	}else{
-	// 		dfd.reject();
-	// 	}
-	// });
   extralifeapi.getUserInfo( participant_id, function( data ){
     dfd.resolve(data);
   });
@@ -253,122 +243,20 @@ function getParticipantInfo(participant_id){
 
 function getParticipantGoal(participant_id){
   var dfd = q.defer();
-  // var userGoalsJson = { goal : "", raised : ""};
-	// var setKey = function(key, value){
-	// 	userGoalsJson[key.toString()] = value;
-	// }
-	// var goalId = participant_id;
-	// var goalUrl = 'http://www.extra-life.org/index.cfm?fuseaction=widgets.ajaxWidgetCompileHTML&callback=jsonpCallback&language=en&participantid0=' + goalId + '&eventid0=525&type0=thermometer&currencyformat0=none&orientation0=horizontal&participantid1=' + goalId + '&eventid1=525&type1=participantImpact&headertext1=My+Impact&fundraiserlabel1=Total+Players';
-	// request(goalUrl, function(error, response){
-	// 	if(!error){
-	// 		var test = response.body.toString().split('jsonpCallback(')[1].split('}});')[0]
-	// 		var raised = test.split('dd-thermo-raised')[1].split('<')[0].split(',').join('');
-	// 		raised = parseInt(raised.split('$')[1].split('\\')[0]);
-	// 		setKey('raised', raised);
-	// 		var goal = test.split('Goal: </span>')[1].split('</strong')[0];
-	// 		goal = parseInt(goal.split('$')[1].split('\\')[0].split(',').join(''));
-	// 		setKey('goal', goal);
-  //     dfd.resolve(userGoalsJson);
-	// 	}else{
-	// 		console.log('Error parsing userGoal URL');
-  //     dfd.reject()
-	// 	}
-	// });
   return dfd.promise;
 }
 
 function getTeamInfo(team_id){
   var dfd = q.defer();
-	// var teamInfoId = team_id;
-	// var teamInfoUrl = 'http://www.extra-life.org/index.cfm?fuseaction=donordrive.teamParticipants&teamID=' + teamInfoId;
-	// var teamInfoJson = {name: "", teamURL: teamInfoUrl, teamImage: "", members:[]};
-	// request(teamInfoUrl, function(error, response, html){
-	// 	if(!error){
-	// 		var $ = cheerio.load(html);
-	// 		$('#team tbody tr').each(function(i, elem){
-	// 			var data = $(this).children('td').children('a');
-	// 			var memberObj ={name:"", raised: "", URL: "", pID: "", image: ""};
-	// 			memberObj.name = data.children('span').children('strong.block').text();
-	// 			memberObj.name = memberObj.name.replace(/(\r\n\t|\n|\r|\t)/gm,"");
-	// 			memberObj.raised = data.children('span').children('.gray').children('small:first-child').children('strong').text();
-	// 			var memberURL = data.attr('href');
-	// 			memberObj.URL = memberURL;
-	// 			memberObj.pID = memberURL.split('participantID=')[1];
-	// 			memberObj.image = 'http:' + data.children('span').children('.member-avatar').attr('src');
-	// 			teamInfoJson.members.push(memberObj);
-	// 		});
-	// 		$('#team-name').filter(function(){
-	// 			teamInfoJson.name = $(this).children('h1').text();
-	// 		})
-	// 		$('.profile-img').filter(function(){
-	// 			teamInfoJson.teamImage = 'http:' + $(this).attr('src');
-	// 		})
-	// 		dfd.resolve(teamInfoJson);
-	// 	}else{
-	// 		console.log('Error parsing teamInfo URL');
-	// 		dfd.reject();
-	// 	}
-	// });
   extralifeapi.getTeamInfo( team_id, function( data ){
     dfd.resolve(data);
   });
   return dfd.promise;
 }
 
-function getTeamGoal(team_id){
-  var dfd = q.defer();
-  var teamGoalsJson = { goal : "", raised : ""};
-	var setKey = function(key, value){
-		teamGoalsJson[key.toString()] = value;
-	}
-	var teamId = team_id;
-	var teamGoalUrl = 'http://www.extra-life.org/index.cfm?fuseaction=widgets.ajaxWidgetCompileHTML&callback=jsonpCallback&language=en&teamid0=' + teamId + '&eventid0=525&type0=thermometer&currencyformat0=none&orientation0=horizontal';
-	request(teamGoalUrl, function(error, response){
-		if(!error){
-			var test = response.body.toString().split('jsonpCallback(')[1].split('}});')[0]
-			var raised = test.split('dd-thermo-raised')[1].split('<')[0].split(',').join('');
-			raised = parseInt(raised.split('$')[1].split('\\')[0]);
-			// console.log(raised);
-			setKey('raised', raised);
-			var goal = test.split('Goal: </span>')[1].split('</strong')[0];
-			goal = parseInt(goal.split('$')[1].split('\\')[0].split(',').join(''));
-			setKey('goal', goal);
-			dfd.resolve(teamGoalsJson)
-		}else{
-			console.log('Error parsing teamGoal URL');
-			dfd.reject();
-		}
-	});
-  return dfd.promise;
-}
-
 function getRecentDonations(participant_id){
   var dfd = q.defer();
-  // var userDonationsJson = {recentDonations:[]};
-	// var donationsId = participant_id;
-	// var donationsUrl = 'http://www.extra-life.org/index.cfm?fuseaction=donorDrive.participantDonations&participantID=' + donationsId;
-	// request(donationsUrl, function(error, response, html){
-	// 	if(!error){
-	// 		var $ = cheerio.load(html);
-	// 		$('.donor-detail').each(function(i, elem){
-	// 			var data = $(this);
-	// 			var donorObj ={};
-	// 			donorObj.name = data.children('strong').text();
-	// 			donorObj.name = donorObj.name.replace(/(\r\n\t|\n|\r|\t)/gm,"");
-	// 			donorObj.date = data.children('small').text();
-	// 			donorObj.date = donorObj.date.replace(/(\r\n\t|\n|\r|\t)/gm,"");
-	// 			donorObj.message = data.children('em').text();
-	// 			donorObj.message = donorObj.message.replace(/(\r\n\t|\n|\r|\t)/gm,"");
-	// 			userDonationsJson.recentDonations.push(donorObj);
-	// 		});
-  //     dfd.resolve(userDonationsJson);
-	// 	}else{
-	// 		console.log('Error parsing recentDonations URL');
-	// 		dfd.reject();
-	// 	}
-	// });
   extralifeapi.getRecentDonations( participant_id, function( data ){
-    console.log(data);
     dfd.resolve(data);
   });
   return dfd.promise;
