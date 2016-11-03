@@ -10,6 +10,7 @@ var INFO = {};
 var recentDonationsCache;
 var notificationsQueue = [];
 var CHECK_INTERVAL = 20000;
+var NOTIFICATIONS_ENABLED = true;
 
 window.slackNotify = function(text){
   request.post('https://hooks.slack.com/services/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', {body: JSON.stringify({text: text, channel: '#extralife', username: 'ExtraLife Donation', icon_emoji: ':extralife:'})});
@@ -21,6 +22,10 @@ document.addEventListener('DOMContentLoaded', function(e){
   var teamIdInput = document.getElementById('team-id');
   var participantIdInput = document.getElementById('participant-id');
   var interval;
+  var notificationCheckbox = document.getElementById('notifications');
+  notificationCheckbox.addEventListener('change', function(e){
+    NOTIFICATIONS_ENABLED = notificationCheckbox.checked;
+  });
   startButton.addEventListener('click', function(e){
     var participant_id = parseInt(participantIdInput.value);
     if(isNaN(participant_id)){
@@ -86,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function(e){
   }
 
 });
-
+// var x;
 function fill(){
   var recentDonationBody = document.querySelector('.donations-body');
   recentDonationBody.innerHTML = '';
@@ -102,10 +107,19 @@ function fill(){
   //   createdOn: "2016-10-30T12:41:27-0400",
   //   donationAmount: 20,
   //   donorName: "Lanzo",
-  //   message: "yo dank #cena yo"
+  //   message: "heres money"
   // };
-  // debugger
-  // INFO.recent_donations.push(q);
+  // // debugger
+  // if(typeof(x) != "undefined"){
+  //   INFO.recent_donations.push(q);
+  //   INFO.recent_donations.push(w);
+  //   INFO.participant_goal.raised += q.donationAmount;
+  //   INFO.team_goal.raised += q.donationAmount;
+  //   INFO.participant_goal.raised += w.donationAmount;
+  //   INFO.team_goal.raised += w.donationAmount;
+  // }
+  // x = true;
+  // 
   INFO.recent_donations.forEach(function(donation){
     var date = new Date(donation.createdOn).toLocaleDateString();
     var message = !!donation.message ? donation.message : 'No Message';
@@ -115,6 +129,14 @@ function fill(){
     donationElement.innerHTML = donationHTML;
     recentDonationBody.appendChild(donationElement);
   });
+  
+  document.querySelector('.team-goal').querySelector('.goal-amount').innerHTML = INFO.team_goal.goal;
+  document.querySelector('.team-goal').querySelector('.goal-current').innerHTML = INFO.team_goal.raised;
+  document.querySelector('.participant-goal').querySelector('.goal-amount').innerHTML = INFO.participant_goal.goal;
+  document.querySelector('.participant-goal').querySelector('.goal-current').innerHTML = INFO.participant_goal.raised;
+  
+  document.querySelector('.team-goal .goal-bar-inner').style.height = Math.round((INFO.team_goal.raised/INFO.team_goal.goal) * 100) + 'px';
+  document.querySelector('.participant-goal .goal-bar-inner').style.height = Math.round((INFO.participant_goal.raised/INFO.participant_goal.goal) * 100) + 'px';
 
   compareDonations();
 }
@@ -133,6 +155,9 @@ function compareDonations(){
 }
 
 setInterval(function(){
+  if(!NOTIFICATIONS_ENABLED){
+    return;
+  }
   if(notificationsQueue.length > 0){
     notify(notificationsQueue[0]);
     checkSound(notificationsQueue[0].message);
@@ -143,11 +168,9 @@ setInterval(function(){
 function checkSound(message){
   if(message.includes('#cena') || message.includes('#CENA')){
     playSound('cena');
-  }
-  if(message.includes('#memes') || message.includes('#MEMES')){
+  }else if(message.includes('#memes') || message.includes('#MEMES')){
     playSound('memes');
-  }
-  if(message.includes('#moneyinthebank') || message.includes('#MONEYINTHEBANK') || message.includes('#MoneyInTheBank')){
+  }else{
     playSound('moneyinthebank');
   }
 }
@@ -162,7 +185,7 @@ function playSound(sound){
 
 function notify(donation){
   var dfd = q.defer();
-  window.slackNotify(donation.donorName+' donated $'+donation.donationAmount+'! :pogchamp: "'+donation.message+'"');
+  window.slackNotify(donation.donorName+' donated $'+donation.donationAmount+' through '+INFO.participant_info.displayName+'! :pogchamp: "'+donation.message+'"');
   notifier.notify({
     title: 'New Donation from '+donation.donorName,
     message: donation.message,
@@ -217,14 +240,18 @@ function getAll(participant_id){
     return dfd.promise;
   }).then(function(partInfo){
     var dfd = q.defer();
-    getTeamInfo(partInfo.teamID).then(function(res){
-      INFO.team_info = res;
-      INFO.team_goal = {
-        goal: res.fundraisingGoal,
-        raised: res.totalRaisedAmount
-      }
+    if(partInfo.teamID){
+      getTeamInfo(partInfo.teamID).then(function(res){
+        INFO.team_info = res;
+        INFO.team_goal = {
+          goal: res.fundraisingGoal,
+          raised: res.totalRaisedAmount
+        }
+        dfd.resolve();
+      });
+    }else{
       dfd.resolve();
-    });
+    }
     return dfd.promise;
   });
   var c = getRecentDonations(participant_id).then(function(res){
