@@ -9,12 +9,9 @@ var path = require('path');
 var INFO = {};
 var recentDonationsCache;
 var notificationsQueue = [];
-var CHECK_INTERVAL = 20000;
+var CHECK_INTERVAL = 10000;
 var NOTIFICATIONS_ENABLED = true;
-
-window.slackNotify = function(text){
-  request.post('https://hooks.slack.com/services/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', {body: JSON.stringify({text: text, channel: '#extralife', username: 'ExtraLife Donation', icon_emoji: ':extralife:'})});
-}
+var ipcRenderer = require('electron').ipcRenderer;
 
 document.addEventListener('DOMContentLoaded', function(e){
   var isRunning = false;
@@ -46,13 +43,17 @@ document.addEventListener('DOMContentLoaded', function(e){
         participantLink.classList.remove('hidden');
         var teamAvatar = document.querySelector('.team-info .avatar');
         var teamName = document.querySelector('.team-info .name');
-        var teamLink = document.querySelector('.team-info .copy-link');
-        var teamOpenLink = document.querySelector('.team-info .open-link');
-        teamOpenLink.setAttribute('data-link', INFO.team_info.teamURL);
-        teamOpenLink.classList.remove('hidden');
-        teamLink.classList.remove('hidden');
-        teamName.innerText = INFO.team_info.name;
-        teamAvatar.style.backgroundImage = "url('"+INFO.team_info.avatarImageURL+"')";
+        if(INFO.team_info){
+          var teamLink = document.querySelector('.team-info .copy-link');
+          var teamOpenLink = document.querySelector('.team-info .open-link');
+          teamOpenLink.setAttribute('data-link', INFO.team_info.teamURL);
+          teamOpenLink.classList.remove('hidden');
+          teamLink.classList.remove('hidden');
+          teamName.innerText = INFO.team_info.name;
+          teamAvatar.style.backgroundImage = "url('"+INFO.team_info.avatarImageURL+"')";
+        }else{
+          document.querySelector('.team-info').classList.add('hidden');
+        }
         participantLink.addEventListener('click', function(e){
           clipboard.writeText(INFO.participant_info.donateURL);
         });
@@ -91,35 +92,35 @@ document.addEventListener('DOMContentLoaded', function(e){
   }
 
 });
-// var x;
 function fill(){
   var recentDonationBody = document.querySelector('.donations-body');
   recentDonationBody.innerHTML = '';
-  // var q = {
-  //   avatarImageURL: "//assets.donordrive.com/extralife/images/$avatars$/constituent_0680BAE6-C292-13D6-0A2E3AA090527D06.jpg",
-  //   createdOn: "2016-10-30T12:41:27-0400",
-  //   donationAmount: 15,
-  //   donorName: "TEST TESTERSON",
-  //   message: "yo dank #memes yo"
-  // };
-  // var w = {
-  //   avatarImageURL: "//assets.donordrive.com/extralife/images/$avatars$/constituent_0680BAE6-C292-13D6-0A2E3AA090527D06.jpg",
-  //   createdOn: "2016-10-30T12:41:27-0400",
-  //   donationAmount: 20,
-  //   donorName: "Lanzo",
-  //   message: "heres money"
-  // };
-  // // debugger
-  // if(typeof(x) != "undefined"){
-  //   INFO.recent_donations.push(q);
-  //   INFO.recent_donations.push(w);
-  //   INFO.participant_goal.raised += q.donationAmount;
-  //   INFO.team_goal.raised += q.donationAmount;
-  //   INFO.participant_goal.raised += w.donationAmount;
-  //   INFO.team_goal.raised += w.donationAmount;
-  // }
-  // x = true;
-  // 
+  var q = {
+    avatarImageURL: "//assets.donordrive.com/extralife/images/$avatars$/constituent_0680BAE6-C292-13D6-0A2E3AA090527D06.jpg",
+    createdOn: "2016-10-30T12:41:27-0400",
+    donationAmount: 15,
+    donorName: "TEST TESTERSON",
+    message: "yo dank #memes yo"
+  };
+  var w = {
+    avatarImageURL: "//assets.donordrive.com/extralife/images/$avatars$/constituent_0680BAE6-C292-13D6-0A2E3AA090527D06.jpg",
+    createdOn: "2016-10-30T12:41:27-0400",
+    donationAmount: 20,
+    donorName: "Lanzo",
+    message: "heres money"
+  };
+  // debugger
+  INFO.recent_donations.push(q);
+  INFO.recent_donations.push(w);
+  INFO.participant_goal.raised += q.donationAmount;
+  INFO.participant_goal.raised += w.donationAmount;
+  if(INFO.team_goal){
+    INFO.team_goal.raised += q.donationAmount;
+    INFO.team_goal.raised += w.donationAmount;
+  }
+
+  console.log(INFO.recent_donations);
+
   INFO.recent_donations.forEach(function(donation){
     var date = new Date(donation.createdOn).toLocaleDateString();
     var message = !!donation.message ? donation.message : 'No Message';
@@ -129,13 +130,15 @@ function fill(){
     donationElement.innerHTML = donationHTML;
     recentDonationBody.appendChild(donationElement);
   });
-  
-  document.querySelector('.team-goal').querySelector('.goal-amount').innerHTML = INFO.team_goal.goal;
-  document.querySelector('.team-goal').querySelector('.goal-current').innerHTML = INFO.team_goal.raised;
+
+  if(INFO.team_info){
+    document.querySelector('.team-goal').querySelector('.goal-amount').innerHTML = INFO.team_goal.goal;
+    document.querySelector('.team-goal').querySelector('.goal-current').innerHTML = INFO.team_goal.raised;
+    document.querySelector('.team-goal .goal-bar-inner').style.height = Math.round((INFO.team_goal.raised/INFO.team_goal.goal) * 100) + 'px';
+  }
+
   document.querySelector('.participant-goal').querySelector('.goal-amount').innerHTML = INFO.participant_goal.goal;
   document.querySelector('.participant-goal').querySelector('.goal-current').innerHTML = INFO.participant_goal.raised;
-  
-  document.querySelector('.team-goal .goal-bar-inner').style.height = Math.round((INFO.team_goal.raised/INFO.team_goal.goal) * 100) + 'px';
   document.querySelector('.participant-goal .goal-bar-inner').style.height = Math.round((INFO.participant_goal.raised/INFO.participant_goal.goal) * 100) + 'px';
 
   compareDonations();
@@ -143,7 +146,7 @@ function fill(){
 
 function compareDonations(){
   var newRecent = INFO.recent_donations;
-  var oldRecent = recentDonationsCache;
+  var oldRecent = recentDonationsCache || [];
   var newDonations = [];
   for(var i=0;i<newRecent.length;i++){
     if(!containsObject(newRecent[i], oldRecent)){
@@ -185,21 +188,24 @@ function playSound(sound){
 
 function notify(donation){
   var dfd = q.defer();
-  window.slackNotify(donation.donorName+' donated $'+donation.donationAmount+' through '+INFO.participant_info.displayName+'! :pogchamp: "'+donation.message+'"');
-  notifier.notify({
-    title: 'New Donation from '+donation.donorName,
-    message: donation.message,
-    icon: path.join(__dirname, 'images', 'controller_blue.png'), // absolute path (not balloons)
-    sound: false, // Only Notification Center or Windows Toasters
-    wait: false // wait with callback until user action is taken on notification
-  }, function (err, response) {
-    if(err){
-      dfd.reject();
-    }else{
-      dfd.resolve();
-    }
-    console.log('err & res', err, response);
-  });
+  console.log(donation.donorName+' donated $'+donation.donationAmount+' through '+INFO.participant_info.displayName+'! :pogchamp: "'+donation.message+'"');
+  // notifier.notify({
+  //   title: 'New Donation from '+donation.donorName,
+  //   message: donation.message,
+  //   icon: path.join(__dirname, 'images', 'controller_blue.png'), // absolute path (not balloons)
+  //   sound: false, // Only Notification Center or Windows Toasters
+  //   wait: false // wait with callback until user action is taken on notification
+  // }, function (err, response) {
+  //   if(err){
+  //     dfd.reject();
+  //   }else{
+  //     dfd.resolve();
+  //   }
+  //   console.log('err & res', err, response);
+  // });
+
+  ipcRenderer.sendSync('notify', donation);
+
   return dfd.promise;
 }
 

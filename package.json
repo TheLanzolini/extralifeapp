@@ -24,6 +24,7 @@
   "homepage": "https://github.com/TheLanzolini/extralifeapp#readme",
   "dependencies": {
     "cheerio": "^0.19.0",
+    "extra-life-api": "^1.1.0",
     "node-notifier": "^4.3.1",
     "q": "^1.4.1",
     "request": "^2.65.0"

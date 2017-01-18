@@ -17,7 +17,7 @@ h1{
   color: white;
 }
 .hidden{
-  display: none;
+  display: none !important;
 }
 .header{
   text-align: center;

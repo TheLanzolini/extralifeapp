@@ -1,5 +1,6 @@
 var app = require('app');  // Module to control application life.
 var BrowserWindow = require('browser-window');  // Module to create native browser window.
+var ipcMain = require('electron').ipcMain;
 
 // Report crashes to our server.
 require('crash-reporter').start();
@@ -22,12 +23,20 @@ app.on('window-all-closed', function() {
 app.on('ready', function() {
   // Create the browser window.
   mainWindow = new BrowserWindow({width: 500, height: 735});
+  notificationWindow = new BrowserWindow({width: 500, height: 500, frame: false, transparent: true});
 
   // and load the index.html of the app.
-  mainWindow.loadUrl('file://' + __dirname + '/index.html');
+  mainWindow.loadURL('file://' + __dirname + '/index.html');
+  notificationWindow.loadURL('file://' + __dirname + '/notify.html');
 
   // Open the DevTools.
   // mainWindow.openDevTools();
+
+  ipcMain.on('notify', function(event, arg){
+    console.log('show the notification', arg);
+    event.returnValue = 'pong';
+    notificationWindow.webContents.send('notify', arg);
+  });
 
   // Emitted when the window is closed.
   mainWindow.on('closed', function() {

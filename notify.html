@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>TheLanzolini - Extra Life</title>
+    <link href='https://fonts.googleapis.com/css?family=Cantarell:400,700' rel='stylesheet' type='text/css'>
+    <script>
+      var ipcRenderer = require('electron').ipcRenderer;
+      ipcRenderer.on('notify', function(event, arg){
+        document.getElementById('notimg').classList.remove('hidden');
+        setTimeout(function(){
+          document.getElementById('notimg').classList.add('hidden');
+        }, 5000);
+      });
+    </script>
+    <style>.hidden{display:none;}</style>
+  </head>
+  <body>
+    <img id="notimg" src="images/tfn.png" class="hidden">
+  </body>
+</html>
